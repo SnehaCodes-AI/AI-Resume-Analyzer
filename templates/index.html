@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <title>AI RESUME ANALYZER</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent-purple: #a855f7;
+            --purple-glow: rgba(168, 85, 247, 0.4);
+        }
+
+        [data-bs-theme="dark"] {
+            --bg-body: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --border-color: rgba(168, 85, 247, 0.2);
+        }
+
+        [data-bs-theme="light"] {
+            --bg-body: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --border-color: #e2e8f0;
+        }
+
+        body { 
+            background-color: var(--bg-body); 
+            font-family: 'Inter', sans-serif; 
+            color: var(--text-main);
+            transition: background 0.3s ease;
+        }
+
+        .main-card { 
+            background: var(--card-bg); 
+            border-radius: 24px; 
+            padding: 50px; 
+            margin-top: 40px; 
+            border: 1px solid var(--border-color);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+        }
+
+        .brand-header { 
+            font-weight: 800; 
+            letter-spacing: -1px; 
+            color: var(--accent-purple); 
+            text-transform: uppercase;
+            font-size: 2.5rem;
+            text-align: center;
+        }
+
+        /* The Strength Meter */
+        .meter-container {
+            background: rgba(168, 85, 247, 0.1);
+            border-radius: 10px;
+            height: 12px;
+            width: 100%;
+            overflow: hidden;
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .meter-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #a855f7, #7e22ce);
+            box-shadow: 0 0 10px var(--purple-glow);
+            transition: width 1.5s ease-out; /* Smooth filling animation */
+            width: 0%; /* Starts at 0 */
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            border-radius: 50px;
+            border: 1px solid var(--accent-purple);
+            background: transparent;
+            color: var(--accent-purple);
+            font-weight: 600;
+            z-index: 1000;
+        }
+
+        .btn-primary { 
+            background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%); 
+            border: none; font-weight: 700; padding: 15px; border-radius: 12px;
+        }
+
+        .result-box { 
+            background: rgba(168, 85, 247, 0.03); 
+            border: 1px solid var(--border-color); 
+            border-radius: 20px; 
+            padding: 30px; 
+            margin-top: 35px;
+            position: relative;
+        }
+
+        #loader { display: none; }
+    </style>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark Mode</button>
+
+<div class="container pb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 main-card">
+            <h1 class="brand-header mb-4">AI RESUME ANALYZER</h1>
+            
+            <form method="POST" enctype="multipart/form-data" id="analysisForm">
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Resume (PDF)</label>
+                    <input type="file" name="resume" class="form-control form-control-lg" accept=".pdf" required>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Job Requirements</label>
+                    <textarea name="job_description" class="form-control" rows="5" placeholder="Paste JD here..." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg w-100" id="submitBtn">ANALYZE MATCH</button>
+            </form>
+
+            <div id="loader" class="mt-5 text-center">
+                <div class="spinner-grow text-primary mb-3"></div>
+                <p class="h5 fw-bold">Comparing Patterns... <span id="timer">3</span>s</p>
+            </div>
+
+            {% if result %}
+            <div class="result-box">
+                <button class="btn btn-sm btn-outline-primary position-absolute top-0 end-0 m-3" onclick="copyToClipboard()" id="copyBtn">Copy</button>
+                
+                <h5 class="fw-bold mb-3">Resume Strength Meter</h5>
+                
+                {% set score = result.split('SCORE:')[1].split('/')[0].strip() if 'SCORE:' in result else "0" %}
+                <div class="meter-container">
+                    <div id="strengthBar" class="meter-fill" data-score="{{ score }}"></div>
+                </div>
+                <p class="small text-end fw-bold mb-4" style="color: var(--accent-purple);">{{ score }}% MATCH</p>
+
+                <div id="analysisContent">
+                    {% for line in result.splitlines() %}
+                        {% if "SCORE:" not in line %}
+                            {% if ":" in line %}
+                                <p class="mb-2"><strong style="color: var(--accent-purple);">{{ line.split(':')[0] }}:</strong> {{ line.split(':')[1] }}</p>
+                            {% else %}
+                                <p class="small opacity-75">{{ line }}</p>
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <div class="mt-4 pt-3 border-top border-secondary">
+                    <form action="/download_report" method="POST">
+                        <input type="hidden" name="result_text" value="{{ result }}">
+                        <button type="submit" class="btn btn-dark w-100 py-3 rounded-3 mt-2">Download Official Report</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    // Theme Toggle
+    function toggleTheme() {
+        const html = document.documentElement;
+        const isDark = html.getAttribute('data-bs-theme') === 'dark';
+        html.setAttribute('data-bs-theme', isDark ? 'light' : 'dark');
+        document.getElementById('themeBtn').innerText = isDark ? "☀️ Light Mode" : "🌙 Dark Mode";
+    }
+
+    // Progress Bar Animation
+    window.onload = function() {
+        const bar = document.getElementById('strengthBar');
+        if (bar) {
+            const score = bar.getAttribute('data-score');
+            setTimeout(() => {
+                bar.style.width = score + "%";
+            }, 100);
+        }
+    };
+
+    // Loader
+    const form = document.getElementById('analysisForm');
+    form.onsubmit = function() {
+        document.getElementById('loader').style.display = 'block';
+        document.getElementById('submitBtn').disabled = true;
+        let time = 3;
+        const interval = setInterval(() => {
+            time--;
+            document.getElementById('timer').innerText = time;
+            if (time <= 0) clearInterval(interval);
+        }, 1000);
+        return true;
+    };
+
+    // Copy Logic
+    function copyToClipboard() {
+        const text = document.getElementById('analysisContent').innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            document.getElementById('copyBtn').innerText = "✓ Copied";
+            setTimeout(() => document.getElementById('copyBtn').innerText = "Copy", 2000);
+        });
+    }
+</script>
+</body>
+</html>
